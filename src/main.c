@@ -5,11 +5,26 @@
 #define CLK 16000000
 #define BUAD 9600
 #define BRC (CLK/16/BUAD - 1)
-#define TX_BUFFER_SIZE 128
 
-char serialBuffer[TX_BUFFER_SIZE];
-uint8_t serialReadPos = 0;
-uint8_t serialWritePos = 0;
+
+
+typedef struct SerialBuffer{
+    char *buffer;
+    uint8_t size;
+    uint8_t readIndex;
+    uint8_t writeIndex;
+} SerialBuffer;
+
+SerialBuffer *initSerialBuffer(uint8_t size) {
+    SerialBuffer *serialBuffer = (SerialBuffer *)malloc(sizeof(SerialBuffer));
+    serialBuffer->buffer = (char *)malloc(size);
+    serialBuffer->size = size;
+    serialBuffer->readIndex = 0;
+    serialBuffer->writeIndex = 0;
+    return serialBuffer;
+}
+
+SerialBuffer serialBuffer;
 
 void appendSerial(char _c);
 void serialWrite(char _c[]);
@@ -27,13 +42,29 @@ int main(void){
     }
 }
 
+
+void serialInit(int bufferSize){
+    //Set baud rate
+    UBRR0H = (BRC >> 8);
+    UBRR0L = BRC;
+    //Enable Transmitter, Enable Transmission Complete Interrupt
+    UCSR0B = (1 << TXEN0)  | (1 << TXCIE0);
+    //Set to 8-bit
+    UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
+    //Enable Interrupts
+    sei();
+    
+    serialBuffer = *initSerialBuffer(16);
+}
+
+
 /*  Adds a char to the serial buffer
  * */
 void appendSerial(char _c){
-    serialBuffer[serialWritePos] = _c;
-    serialWritePos++;
-    if (serialWritePos >= TX_BUFFER_SIZE){
-	serialWritePos = 0;
+    serialBuffer.buffer[serialBuffer.writeIndex] = _c;
+    serialBuffer.writeIndex++;
+    if (serialBuffer.writeIndex >= serialBuffer.size){
+	serialBuffer.writeIndex = 0;
     }
 }
 
@@ -42,11 +73,11 @@ void appendSerial(char _c){
  *  Stops transmission when at write pos
  * */
 ISR(USART_TX_vect){
-    if(serialReadPos != serialWritePos){
-	UDR0 = serialBuffer[serialReadPos];
-	serialReadPos++;
-	if (serialReadPos >= TX_BUFFER_SIZE){
-	    serialReadPos = 0;
+    if(serialBuffer.readIndex != serialBuffer.writeIndex){
+	UDR0 = serialBuffer.buffer[serialBuffer.readIndex];
+	serialBuffer.readIndex++;
+	if (serialBuffer.readIndex >= serialBuffer.size){
+	    serialBuffer.readIndex = 0;
 	}
     }
 }
@@ -66,17 +97,7 @@ void serialWrite(char c[]){
     }
 }
 
-void serialInit(){
-    //Set baud rate
-    UBRR0H = (BRC >> 8);
-    UBRR0L = BRC;
-    //Enable Transmitter, Enable Transmission Complete Interrupt
-    UCSR0B = (1 << TXEN0)  | (1 << TXCIE0);
-    //Set to 8-bit
-    UCSR0C = (1 << UCSZ01) | (1 << UCSZ00);
-    //Enable Interrupts
-    sei();
-}
+
 
 void adcInit(){
     //Sets Reference Voltage to AVcc (+5V)
