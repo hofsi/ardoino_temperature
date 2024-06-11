@@ -1,12 +1,11 @@
 
-#include <cstdint>
 
 uint8_t transmit(){
-    //Wait for interrupt bit to start the transmission
+    //Wait for transmission to finish
     while(!(TWCR&(1<<TWINT)))
 	;
 
-    //Check the status register if transmission is possible
+    //Check the status register if transmission was successfull
     if ((TWSR & 0xF8) != START)
 	end_transmission();
 	return TWSR;
