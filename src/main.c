@@ -1,6 +1,8 @@
 #include "serial.h"
 #include "adc.h"
+#include <cstdint>
 
+uint8_t twc_buffer[2]
 
 void main(void){
     adcInit();
