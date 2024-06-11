@@ -1,3 +1,4 @@
+#include "adc.h"
 
 void adcInit(){
     //Sets Reference Voltage to AVcc (+5V)

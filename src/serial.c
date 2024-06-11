@@ -68,8 +68,7 @@ ISR(USART_TX_vect){
  *  Restarts Transmission
  * */
 void serialWrite(char c[]){
-    uint8_t i = 0;
-    for (i; i < strlen(c); i++){
+    for (uint8_t i = 0; i < strlen(c); i++){
 	serialAppend(c[i]);
     }
     //USARRT Data Register Empty => Transmit 0 to restart Transmission
@@ -79,29 +78,4 @@ void serialWrite(char c[]){
 }
 
 
-
-void adcInit(){
-    //Sets Reference Voltage to AVcc (+5V)
-    ADMUX = (1 << REFS0); 
-    //Enable ADC, Enable ADC Interrupt, sets clock prescaler to 128
-    ADCSRA = (1 << ADEN) | (1 << ADIE) | 0b111 ; 
-    sei();
-}
-
-void adcStartConversion(int _ADCn){
-    //Selects ADCn pin for ADC
-    ADMUX |= 0b1111;
-    ADMUX ^= 0b1111;
-    ADMUX |= _ADCn;
-    //Disables Digital Input for ADCn
-    DIDR0 |= (1 << _ADCn);
-    //Starts Conversion
-    ADCSRA |= (1 << ADSC);
-}
-
-ISR(ADC_vect){
-    char temp[sizeof(char) * 10]; 
-    sprintf(temp , "%i\n\r", ADC);
-    serialWrite(temp);
-}
 
