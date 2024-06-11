@@ -9,6 +9,7 @@ uint8_t transmit(){
     if ((TWSR & 0xF8) != START)
 	end_transmission();
 	return TWSR;
+    return 0;
 }
 
 
@@ -22,7 +23,7 @@ void end_transmission(){
 }
 
 
-uint8_t initTWC_MT(uint8_t _slave_addr, uint8_t _data ){
+uint8_t initTWC_MT(uint8_t _slave_addr, uint8_t* _data, uint8_t _data_len ){
     
     start_transmission();
     
@@ -35,13 +36,17 @@ uint8_t initTWC_MT(uint8_t _slave_addr, uint8_t _data ){
     
     uint8_t result = transmit();
     if (result != 0) {return result;}
-    
-    //Set send register to transmission data and begin transmission
-    TWDR = _data;
-    TWCR = (1<<TWINT) | (1<<TWEN);
+     
+    for (int i = 0; i < _data_len; i++){
+	
+	//Set send register to transmission data and begin transmission
+	TWDR = _data;
+	TWCR = (1<<TWINT) | (1<<TWEN);
 
-    uint8_t result = transmit();
-    if (result != 0) {return result;}
+	uint8_t result = transmit();
+	if (result != 0) {return result;}	
+    }
+
 
     end_transmission();
     return 0;
