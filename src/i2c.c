@@ -28,21 +28,21 @@ uint8_t initTWC_MT(uint8_t _slave_addr, uint8_t _data ){
     start_transmission();
     
     uint8_t result = transmit();
-    return (result != 0) ? result:; 
+    if (result != 0) {return result;}
 
     //Set slave address (this may include a RW bit) and start address transmission
     TWDR = _slave_addr;
     TWCR = (1<<TWINT) | (1<<TWEN);
     
     uint8_t result = transmit();
-    return (result != 0) ? result:; 
+    if (result != 0) {return result;}
     
     //Set send register to transmission data and begin transmission
     TWDR = _data;
     TWCR = (1<<TWINT) | (1<<TWEN);
 
     uint8_t result = transmit();
-    return (result != 0) ? result:; 
+    if (result != 0) {return result;}
 
     end_transmission();
     return 0;
@@ -75,12 +75,12 @@ uint8_t initTWC_MR(uint8_t _slave_addr, uint8_t* _data, uint8_t _data_len ){
 	    TWCR = (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
 
 	    uint8_t result = transmit();
-	    return (result != 0) ? result:;  	
+	    if (result != 0) {return result;} 	
 	} else {
 	    TWCR = (1<<TWINT) | (1<<TWEA) | (1<<TWEN);
 
 	    uint8_t result = transmit();
-	    return (result != 0) ? result:; 
+	    if (result != 0) {return result;} 
 	}
 
     }
