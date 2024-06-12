@@ -8,7 +8,7 @@ uint8_t twc_buffer[2];
 
 void printer(uint8_t nr){
     if (nr == 0){return;}
-    char result[5];
+    char result[6];
     sprintf(result,"%i\n\r", nr);
     serialWrite(result);
 }
@@ -20,12 +20,12 @@ void new_measurement(){
 }
 
 void read_measurement(uint8_t reg){
-    uint8_t measurement[2] = {0,0};
+    uint8_t measurement[3] = {0,0,0};
     //Set forced mode and all sensors 1x
     printer(TWC_MT(0b11101100,&reg,1));
-    printer(TWC_MR(0b11101101,measurement,2));
-    uint16_t com = (measurement[1] << 8) | measurement[0];
-    char result[8];
+    printer(TWC_MR(0b11101101,measurement,3));
+    uint16_t com = (measurement[1] << 8) | measurement[2];
+    char result[10];
     sprintf(result, "%u\n\r", com);
     serialWrite(result);
 }
@@ -35,7 +35,7 @@ void read_reg(uint8_t reg){
     //Set forced mode and all sensors 1x
     printer(TWC_MT(0b11101100,&reg,1));
     printer(TWC_MR(0b11101101,&measurement,1));
-    char result[5];
+    char result[6];
     sprintf(result, "%u\n\r", measurement);
     serialWrite(result);
 }
