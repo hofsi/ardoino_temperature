@@ -1,24 +1,5 @@
 #include "i2c.h"
 #include "serial.h"
-#include <cstdint>
-
-typedef enum TWCStage{
-    Start, SlaveAddress, TR, Stop, Off
-}TWCStage;
-
-typedef enum TWCMode{
-    Transmit, Recive,
-} TWCMode;
-
-
-typedef struct TWCStruct{
-    uint8_t *address;
-    TWCStage stage;
-    TWCMode mode;
-    uint8_t *data;
-    uint8_t length;
-    uint8_t position;
-} TWCStruct;
 
 TWCStruct twcstruct;
 
@@ -33,14 +14,49 @@ void twc_init(){
     sei();
 }
 
-uint8_t twc_start(TWCStruct twcs){
-    if (twcs.stage != Start){
-	serialWrite("ETWC No Start\n\r");
-	return 1;
-    }
+void twc_start(TWCStruct twcs){
+    while(twcstruct.stage != Off);
     twcstruct = twcs;
     sei();
     TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);
+}
+
+
+
+void twc_stop(){
+    TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);
+}
+
+void twc_tr(){
+    twcstruct.stage = TR;
+    if (twcstruct.mode == Transmit){
+	TWDR = twcstruct.data[twcstruct.position];
+    } else {
+	twcstruct.data[twcstruct.position] = TWDR;
+	TWCR = (1<<TWEA);
+    }
+    twcstruct.position++;
+    if (twcstruct.position >= twcstruct.length){
+	TWCR = 0;
+	twcstruct.stage = Stop;
+    }
+}
+
+void twc_next(){
+    switch (twcstruct.stage) {
+	case Start:
+	    TWDR = *twcstruct.address;
+	case SlaveAddress:
+	case TR:
+	    twc_tr();
+	case Stop:
+	    twcstruct.stage = Off;
+	    TWCR = (1<<TWSTO);
+	default:
+	    TWCR = 0;
+	    return;
+    }
+    TWCR &= (1<<TWINT)|(1<<TWEN)|(1<<TWIE);
 }
 
 ISR(TWI_vect){
@@ -60,47 +76,9 @@ ISR(TWI_vect){
 	return;
     }
 
-    /*Select Next Stage*/
-   twc_next();
     /*Begin Transmission*/
+   twc_next();
 }
-
-void twc_stop(){
-    TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);
-}
-
-bool twc_tr(){
-    twcstruct.stage = TR;
-    if twcstruct.mode == Transmit{
-	TWDR = twcstruct.data[twcstruct.position];
-    } else {
-	twcstruct.data[twcstruct.position] = TWDR;
-	TWCR = (1<<TWEA);
-    }
-    twcstruct.position++;
-    if twcstruct.position => twcstruct.length{
-	TWCR = 0;
-	twcstruct.stage = Stop;
-    }
-}
-
-void twc_next(){
-    switch (twcstruct.stage) {
-	case Start:
-	    TWDR = twcstruct.address;
-	case SlaveAddress:
-	case TR:
-	    twc_tr();
-	case Stop:
-	    twcstruct.stage = Off;
-	    TWCR = (1<<TWSTO);
-	default:
-	    TWCR = 0;
-	    return;
-    }
-    TWCR &= (1<<TWINT)|(1<<TWEN)|(1<<TWIE);
-}
-
 //=============OLD=CODE=========================
 
 void end_transmission(){

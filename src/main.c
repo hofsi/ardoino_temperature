@@ -13,6 +13,45 @@ void printer(uint8_t nr){
     serialWrite(result);
 }
 
+void read_measurement(uint8_t reg){
+    uint8_t measurement[3] = {0,0,0};
+    //Set forced mode and all sensors 1x
+    twc_start((TWCStruct){0b11101100,Start,Transmit,&reg,1,0});
+    twc_start((TWCStruct){0b11101101,Start,Recive,measurement,3,0});
+    uint16_t com = (measurement[1] << 8) | measurement[2];
+    char result[10];
+    sprintf(result, "%u\n\r", com);
+    serialWrite(result);
+}
+
+void new_measurement(){
+    //Set forced mode and all sensors 1x
+    uint8_t send[2] = {0xF4, 0b00100101};
+    twc_start((TWCStruct){0b11101100,Start,Transmit,send,2,0});
+
+}
+
+
+int main (void){
+    serialInit();
+    twc_init();
+    _delay_ms(500);
+    serialWrite("B\n\r");
+
+    uint8_t send[2] = {0xF5, 0b0000000};
+    twc_start((TWCStruct){0b11101100,Start,Transmit,send,2,0});
+
+    while(1){
+	new_measurement();
+	_delay_ms(1000);
+	serialWrite("P");
+	read_measurement(0xF7);
+	serialWrite("T");
+	read_measurement(0xFA);
+    }
+
+}
+/*
 void new_measurement(){
     //Set forced mode and all sensors 1x
     uint8_t send[2] = {0xF4, 0b00100101};
@@ -62,4 +101,5 @@ int main(void){
 	read_measurement(0xFA);
     }
 }
+*/
 
