@@ -1,7 +1,15 @@
 #include "i2c.h"
 #include "serial.h"
+#include <stdint.h>
+
 
 TWCStruct twcstruct;
+
+uint8_t twc_status(){
+    if (twcstruct.stage == Off)
+	return 0;
+    return 1;
+}
 
 void twc_init(){
     TWBR = 0b10000000;
@@ -10,53 +18,54 @@ void twc_init(){
     /* Enable internal pull-ups */
     DDRC  &= ~((1<<PC5) | (1<<PC4));
     PORTC |=   (1<<PC5) | (1<<PC4);
-
+    twcstruct.stage = Off;
     sei();
 }
 
 void twc_start(TWCStruct twcs){
-    while(twcstruct.stage != Off);
+    while(twc_status());
     twcstruct = twcs;
     sei();
     TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN)|(1<<TWIE);
 }
 
-
-
-void twc_stop(){
-    TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);
-}
-
 void twc_tr(){
+    uint8_t twcr_carry = 0;
     twcstruct.stage = TR;
     if (twcstruct.mode == Transmit){
 	TWDR = twcstruct.data[twcstruct.position];
     } else {
 	twcstruct.data[twcstruct.position] = TWDR;
-	TWCR = (1<<TWEA);
+	twcr_carry |= (1<<TWEA);
     }
     twcstruct.position++;
     if (twcstruct.position >= twcstruct.length){
-	TWCR = 0;
 	twcstruct.stage = Stop;
+	TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE);
+    } else {
+	TWCR |= twcr_carry | (1<<TWINT)|(1<<TWEN)|(1<<TWIE);
     }
 }
 
 void twc_next(){
     switch (twcstruct.stage) {
 	case Start:
-	    TWDR = *twcstruct.address;
+	    TWDR = twcstruct.address;
+	    twcstruct.stage = SlaveAddress;
+	    TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE);
+	    break;
 	case SlaveAddress:
 	case TR:
 	    twc_tr();
+	    break;
 	case Stop:
 	    twcstruct.stage = Off;
-	    TWCR = (1<<TWSTO);
+	    TWCR = (1<<TWSTO)|(1<<TWINT)|(1<<TWEN)|(1<<TWIE);
+	    break;
 	default:
 	    TWCR = 0;
 	    return;
     }
-    TWCR &= (1<<TWINT)|(1<<TWEN)|(1<<TWIE);
 }
 
 ISR(TWI_vect){
@@ -69,7 +78,7 @@ ISR(TWI_vect){
 	((TWSR & 0xF8) == 0x50) ||
 	((TWSR & 0xF8) == 0x58)
 	)){
-	serialWrite("ETWC2 Transmission Failed ");
+	serialWrite("ETWC2");
 	char result[6];
 	sprintf(result,"%i\n\r", TWSR);
 	serialWrite(result);
